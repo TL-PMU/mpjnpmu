@@ -185,7 +185,7 @@ export default function UserProfile({ currentUser, userProfile, onProfileUpdate 
 
             {/* Attendance Status */}
             <div className="glass-card p-4 bg-ocean-50/50">
-              <h4 className="font-medium text-water-800 mb-3">Today's Attendance</h4>
+              <h4 className="font-medium text-water-800 mb-3">Today&apos;s Attendance</h4>
               <label className="flex items-center space-x-3 cursor-pointer">
                 <input
                   type="checkbox"
