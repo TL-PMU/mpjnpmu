@@ -2,19 +2,82 @@
 @tailwind components;
 @tailwind utilities;
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
-html, body, #__next {
-height: 100%;
+@layer base {
+  html, body, #__next {
+    height: 100%;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply font-sans antialiased;
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #bae6fd 100%);
+    background-attachment: fixed;
+    color: #0c4a6e;
+  }
 }
 
-
-body {
-background: linear-gradient(180deg, #f3fbff 0%, #e6f7ff 100%);
-color: #03303b;
-font-family: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+@layer components {
+  .glass-card {
+    @apply bg-white/80 backdrop-blur-sm border border-white/20 rounded-xl shadow-lg;
+  }
+  
+  .water-gradient {
+    background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 50%, #0369a1 100%);
+  }
+  
+  .ocean-gradient {
+    background: linear-gradient(135deg, #14b8a6 0%, #0d9488 50%, #0f766e 100%);
+  }
+  
+  .btn-primary {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 active:scale-95;
+    @apply bg-gradient-to-r from-water-500 to-water-600 text-white shadow-lg hover:shadow-xl;
+  }
+  
+  .btn-secondary {
+    @apply px-4 py-2 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 active:scale-95;
+    @apply bg-white/60 backdrop-blur-sm text-water-700 border border-water-200 hover:bg-white/80;
+  }
+  
+  .input-field {
+    @apply w-full px-4 py-2 rounded-lg border border-water-200 bg-white/60 backdrop-blur-sm;
+    @apply focus:outline-none focus:ring-2 focus:ring-water-400 focus:border-transparent;
+    @apply transition-all duration-200;
+  }
+  
+  .status-present {
+    @apply bg-gradient-to-r from-ocean-400 to-ocean-500 text-white;
+  }
+  
+  .status-absent {
+    @apply bg-gradient-to-r from-red-400 to-red-500 text-white;
+  }
+  
+  .nav-tab {
+    @apply px-6 py-3 rounded-lg font-medium transition-all duration-200;
+    @apply border border-water-200 bg-white/40 backdrop-blur-sm text-water-700;
+    @apply hover:bg-white/60 hover:scale-105 active:scale-95;
+  }
+  
+  .nav-tab-active {
+    @apply px-6 py-3 rounded-lg font-medium transition-all duration-200;
+    @apply bg-gradient-to-r from-water-500 to-water-600 text-white shadow-lg;
+  }
 }
 
-
-.container {
-max-width: 1100px;
+@layer utilities {
+  .text-shadow {
+    text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+  
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0%, 100% { transform: translateY(0px); }
+    50% { transform: translateY(-10px); }
+  }
 }
