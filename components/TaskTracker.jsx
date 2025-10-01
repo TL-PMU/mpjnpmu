@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { CheckSquare, Plus, Calendar, User, Clock, AlertCircle, CheckCircle, Loader } from 'lucide-react'
+import { CheckSquare, Plus, Calendar, User, Clock, AlertCircle, CheckCircle, Loader, X, Users } from 'lucide-react'
 import useSWR from 'swr'
+import TaskDetailModal from './TaskDetailModal'
 
 const fetcher = async (query) => {
   const { data, error } = await supabase.from(query.table).select(query.select).order('due_date', { ascending: true })
@@ -11,15 +12,8 @@ const fetcher = async (query) => {
 
 export default function TaskTracker({ currentUser, userProfile }) {
   const [showAddTask, setShowAddTask] = useState(false)
-  const [newTask, setNewTask] = useState({
-    title: '',
-    assigned_to: '',
-    assigned_to_name: '',
-    due_date: '',
-    current_status: 'Open'
-  })
+  const [selectedTask, setSelectedTask] = useState(null)
   const [profiles, setProfiles] = useState([])
-  const [loading, setLoading] = useState(false)
 
   // Fetch tasks with SWR
   const { data: tasks, error: tasksError, mutate: mutateTasks } = useSWR(
@@ -34,78 +28,12 @@ export default function TaskTracker({ currentUser, userProfile }) {
   }, [])
 
   const loadProfiles = async () => {
-    const { data } = await supabase.from('profiles').select('id, full_name, email')
+    const { data } = await supabase.from('profiles').select('id, full_name, email, role')
     setProfiles(data || [])
   }
 
   const canAddTasks = userProfile?.role === 'admin'
   const canEditAllTasks = userProfile?.role === 'admin'
-
-  const addTask = async () => {
-    if (!currentUser || !canAddTasks) return
-
-    setLoading(true)
-    try {
-      const assignedProfile = profiles.find(p => p.id === newTask.assigned_to)
-      
-      const task = {
-        title: newTask.title,
-        assigned_to: newTask.assigned_to,
-        assigned_to_name: assignedProfile?.full_name || assignedProfile?.email || 'Unknown',
-        assigned_by: currentUser.id,
-        assigned_by_name: userProfile?.full_name || currentUser.email,
-        assigned_date: new Date().toISOString(),
-        due_date: newTask.due_date ? new Date(newTask.due_date).toISOString() : null,
-        current_status: 'Open',
-        expected_completion_date: null
-      }
-
-      const { error } = await supabase.from('tasks').insert([task])
-      if (error) throw error
-
-      setNewTask({ title: '', assigned_to: '', assigned_to_name: '', due_date: '', current_status: 'Open' })
-      setShowAddTask(false)
-      mutateTasks()
-    } catch (error) {
-      alert(error.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const updateTaskStatus = async (taskId, status, expectedDate) => {
-    try {
-      const updates = {
-        current_status: status,
-        expected_completion_date: expectedDate ? new Date(expectedDate).toISOString() : null
-      }
-
-      const { error } = await supabase.from('tasks').update(updates).eq('id', taskId)
-      if (error) throw error
-
-      mutateTasks()
-    } catch (error) {
-      alert(error.message)
-    }
-  }
-
-  const getStatusColor = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'done': return 'bg-green-100 text-green-800 border-green-200'
-      case 'in progress': return 'bg-blue-100 text-blue-800 border-blue-200'
-      case 'blocked': return 'bg-red-100 text-red-800 border-red-200'
-      default: return 'bg-gray-100 text-gray-800 border-gray-200'
-    }
-  }
-
-  const getStatusIcon = (status) => {
-    switch (status?.toLowerCase()) {
-      case 'done': return <CheckCircle className="w-4 h-4" />
-      case 'in progress': return <Loader className="w-4 h-4" />
-      case 'blocked': return <AlertCircle className="w-4 h-4" />
-      default: return <Clock className="w-4 h-4" />
-    }
-  }
 
   if (!currentUser) {
     return (
@@ -169,72 +97,25 @@ export default function TaskTracker({ currentUser, userProfile }) {
 
       {/* Add Task Modal */}
       {showAddTask && (
-        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-          <div className="glass-card p-6 w-full max-w-md animate-slide-up">
-            <h3 className="text-lg font-semibold text-water-800 mb-4">Add New Task</h3>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-water-700 mb-2">
-                  Task Title
-                </label>
-                <input
-                  type="text"
-                  value={newTask.title}
-                  onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
-                  placeholder="Enter task title"
-                  className="input-field"
-                />
-              </div>
+        <AddTaskModal
+          profiles={profiles}
+          currentUser={currentUser}
+          userProfile={userProfile}
+          onClose={() => setShowAddTask(false)}
+          onTaskAdded={mutateTasks}
+        />
+      )}
 
-              <div>
-                <label className="block text-sm font-medium text-water-700 mb-2">
-                  Assign To
-                </label>
-                <select
-                  value={newTask.assigned_to}
-                  onChange={(e) => setNewTask({ ...newTask, assigned_to: e.target.value })}
-                  className="input-field"
-                >
-                  <option value="">Select team member</option>
-                  {profiles.map((profile) => (
-                    <option key={profile.id} value={profile.id}>
-                      {profile.full_name || profile.email}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-water-700 mb-2">
-                  Due Date
-                </label>
-                <input
-                  type="date"
-                  value={newTask.due_date}
-                  onChange={(e) => setNewTask({ ...newTask, due_date: e.target.value })}
-                  className="input-field"
-                />
-              </div>
-            </div>
-
-            <div className="flex justify-end space-x-3 mt-6">
-              <button
-                onClick={() => setShowAddTask(false)}
-                className="btn-secondary"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={addTask}
-                disabled={loading || !newTask.title || !newTask.assigned_to}
-                className="btn-primary disabled:opacity-50"
-              >
-                {loading ? 'Adding...' : 'Add Task'}
-              </button>
-            </div>
-          </div>
-        </div>
+      {/* Task Detail Modal */}
+      {selectedTask && (
+        <TaskDetailModal
+          task={selectedTask}
+          currentUser={currentUser}
+          userProfile={userProfile}
+          profiles={profiles}
+          onClose={() => setSelectedTask(null)}
+          onTaskUpdated={mutateTasks}
+        />
       )}
 
       {/* Tasks List */}
@@ -268,8 +149,7 @@ export default function TaskTracker({ currentUser, userProfile }) {
                 task={task}
                 currentUser={currentUser}
                 userProfile={userProfile}
-                onStatusUpdate={updateTaskStatus}
-                canEditAll={canEditAllTasks}
+                onClick={() => setSelectedTask(task)}
                 index={index}
               />
             ))}
@@ -280,56 +160,263 @@ export default function TaskTracker({ currentUser, userProfile }) {
   )
 }
 
-function TaskCard({ task, currentUser, userProfile, onStatusUpdate, canEditAll, index }) {
-  const [status, setStatus] = useState(task.current_status || 'Open')
-  const [expectedDate, setExpectedDate] = useState(
-    task.expected_completion_date ? task.expected_completion_date.split('T')[0] : ''
+// Add Task Modal Component
+function AddTaskModal({ profiles, currentUser, userProfile, onClose, onTaskAdded }) {
+  const [loading, setLoading] = useState(false)
+  const [formData, setFormData] = useState({
+    title: '',
+    description: '',
+    primary_poc: '',
+    additional_members: [],
+    due_date: ''
+  })
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+
+    try {
+      const primaryPocProfile = profiles.find(p => p.id === formData.primary_poc)
+      
+      // Create task
+      const { data: taskData, error: taskError } = await supabase
+        .from('tasks')
+        .insert([{
+          title: formData.title,
+          description: formData.description,
+          assigned_to: formData.primary_poc,
+          assigned_to_name: primaryPocProfile?.full_name || primaryPocProfile?.email,
+          assigned_by: currentUser.id,
+          assigned_by_name: userProfile?.full_name || currentUser.email,
+          primary_poc: formData.primary_poc,
+          primary_poc_name: primaryPocProfile?.full_name || primaryPocProfile?.email,
+          due_date: formData.due_date ? new Date(formData.due_date).toISOString() : null,
+          current_status: 'Open'
+        }])
+        .select()
+        .single()
+
+      if (taskError) throw taskError
+
+      // Add additional members if any
+      if (formData.additional_members.length > 0) {
+        const assignments = formData.additional_members.map(userId => {
+          const profile = profiles.find(p => p.id === userId)
+          return {
+            task_id: taskData.id,
+            user_id: userId,
+            user_name: profile?.full_name || profile?.email,
+            is_primary_poc: false
+          }
+        })
+
+        const { error: assignError } = await supabase
+          .from('task_assignments')
+          .insert(assignments)
+
+        if (assignError) throw assignError
+      }
+
+      onTaskAdded()
+      onClose()
+    } catch (error) {
+      alert(error.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const toggleMember = (userId) => {
+    if (formData.additional_members.includes(userId)) {
+      setFormData({
+        ...formData,
+        additional_members: formData.additional_members.filter(id => id !== userId)
+      })
+    } else {
+      setFormData({
+        ...formData,
+        additional_members: [...formData.additional_members, userId]
+      })
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4 overflow-y-auto">
+      <div className="glass-card p-6 w-full max-w-2xl animate-slide-up my-8">
+        <h3 className="text-lg font-semibold text-water-800 mb-4">Create New Task</h3>
+        
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-water-700 mb-2">
+              Task Title *
+            </label>
+            <input
+              type="text"
+              value={formData.title}
+              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+              placeholder="Enter task title"
+              className="input-field"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-water-700 mb-2">
+              Description
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+              placeholder="Enter detailed task description"
+              className="input-field min-h-[100px]"
+              rows="4"
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-water-700 mb-2">
+              Primary Point of Contact *
+            </label>
+            <select
+              value={formData.primary_poc}
+              onChange={(e) => setFormData({ ...formData, primary_poc: e.target.value })}
+              className="input-field"
+              required
+            >
+              <option value="">Select primary POC</option>
+              {profiles.map((profile) => (
+                <option key={profile.id} value={profile.id}>
+                  {profile.full_name || profile.email} ({profile.role})
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-water-600 mt-1">
+              Primary POC can update task status and expected completion date
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-water-700 mb-2">
+              Additional Team Members
+            </label>
+            <div className="glass-card p-3 max-h-48 overflow-y-auto">
+              {profiles
+                .filter(p => p.id !== formData.primary_poc)
+                .map((profile) => (
+                  <label key={profile.id} className="flex items-center space-x-2 py-2 cursor-pointer hover:bg-water-50 rounded px-2">
+                    <input
+                      type="checkbox"
+                      checked={formData.additional_members.includes(profile.id)}
+                      onChange={() => toggleMember(profile.id)}
+                      className="w-4 h-4 text-water-500 border-water-300 rounded"
+                    />
+                    <span className="text-sm text-water-700">
+                      {profile.full_name || profile.email} ({profile.role})
+                    </span>
+                  </label>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-water-700 mb-2">
+              Due Date
+            </label>
+            <input
+              type="date"
+              value={formData.due_date}
+              onChange={(e) => setFormData({ ...formData, due_date: e.target.value })}
+              className="input-field"
+            />
+          </div>
+
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={onClose}
+              className="btn-secondary"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading}
+              className="btn-primary disabled:opacity-50"
+            >
+              {loading ? 'Creating...' : 'Create Task'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
   )
-  const [isEditing, setIsEditing] = useState(false)
+}
 
-  const isAssignedUser = currentUser.id === task.assigned_to
-  const canEdit = isAssignedUser || canEditAll
+// Task Card Component
+function TaskCard({ task, currentUser, userProfile, onClick, index }) {
+  const [assignments, setAssignments] = useState([])
 
-  const handleSave = () => {
-    onStatusUpdate(task.id, status, expectedDate)
-    setIsEditing(false)
+  useEffect(() => {
+    loadAssignments()
+  }, [task.id])
+
+  const loadAssignments = async () => {
+    const { data } = await supabase
+      .from('task_assignments')
+      .select('*')
+      .eq('task_id', task.id)
+      .order('is_primary_poc', { ascending: false })
+    
+    setAssignments(data || [])
   }
 
   const isOverdue = task.due_date && new Date(task.due_date) < new Date() && task.current_status !== 'Done'
+  const isAssigned = assignments.some(a => a.user_id === currentUser?.id)
+  const isPrimaryPOC = assignments.some(a => a.user_id === currentUser?.id && a.is_primary_poc)
 
   return (
     <div 
-      className={`glass-card p-4 hover:scale-[1.02] transition-all duration-200 ${
+      className={`glass-card p-4 hover:scale-[1.02] transition-all duration-200 cursor-pointer ${
         isOverdue ? 'border-l-4 border-red-400' : ''
       } animate-slide-up`}
       style={{ animationDelay: `${index * 0.1}s` }}
+      onClick={onClick}
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
           <h4 className="font-semibold text-water-800 text-lg">
             {task.title || 'Untitled Task'}
           </h4>
-          <div className="flex items-center space-x-4 mt-2 text-sm text-water-600">
-            <span className="flex items-center space-x-1">
-              <User className="w-4 h-4" />
-              <span>Assigned to: {task.assigned_to_name}</span>
+          {task.description && (
+            <p className="text-sm text-water-600 mt-1 line-clamp-2">
+              {task.description}
+            </p>
+          )}
+          <div className="flex items-center flex-wrap gap-2 mt-2">
+            <span className="flex items-center space-x-1 text-sm text-water-600">
+              <Users className="w-4 h-4" />
+              <span>{assignments.length} assigned</span>
             </span>
-            <span className="flex items-center space-x-1">
-              <User className="w-4 h-4" />
-              <span>By: {task.assigned_by_name}</span>
-            </span>
+            {isPrimaryPOC && (
+              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
+                Primary POC
+              </span>
+            )}
+            {isAssigned && !isPrimaryPOC && (
+              <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">
+                Team Member
+              </span>
+            )}
           </div>
         </div>
         
-        <div className={`px-3 py-1 rounded-full text-sm font-medium border flex items-center space-x-1 ${
-          task.current_status ? getStatusColor(task.current_status) : 'bg-gray-100 text-gray-800'
-        }`}>
+        <div className={`px-3 py-1 rounded-full text-sm font-medium border flex items-center space-x-1 ${getStatusColor(task.current_status)}`}>
           {getStatusIcon(task.current_status)}
           <span>{task.current_status || 'Open'}</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4 text-sm">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
         <div className="flex items-center space-x-2">
           <Calendar className="w-4 h-4 text-water-400" />
           <div>
@@ -363,60 +450,12 @@ function TaskCard({ task, currentUser, userProfile, onStatusUpdate, canEditAll, 
           </div>
         </div>
       </div>
-
-      {canEdit && (
-        <div className="border-t border-water-100 pt-4">
-          {isEditing ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-              <div>
-                <label className="block text-xs text-water-600 mb-1">Status</label>
-                <select
-                  value={status}
-                  onChange={(e) => setStatus(e.target.value)}
-                  className="input-field text-sm"
-                >
-                  <option value="Open">Open</option>
-                  <option value="In Progress">In Progress</option>
-                  <option value="Blocked">Blocked</option>
-                  <option value="Done">Done</option>
-                </select>
-              </div>
-              
-              <div>
-                <label className="block text-xs text-water-600 mb-1">Expected Completion</label>
-                <input
-                  type="date"
-                  value={expectedDate}
-                  onChange={(e) => setExpectedDate(e.target.value)}
-                  className="input-field text-sm"
-                />
-              </div>
-              
-              <div className="flex space-x-2">
-                <button onClick={handleSave} className="btn-primary text-sm">
-                  Save
-                </button>
-                <button 
-                  onClick={() => setIsEditing(false)} 
-                  className="btn-secondary text-sm"
-                >
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button
-              onClick={() => setIsEditing(true)}
-              className="btn-secondary text-sm"
-            >
-              {isAssignedUser ? 'Update Status' : 'Edit Task'}
-            </button>
-          )}
-        </div>
-      )}
     </div>
   )
 }
+
+// Task Detail Modal Component
+// Imported from TaskDetailModal.jsx
 
 function getStatusColor(status) {
   switch (status?.toLowerCase()) {
