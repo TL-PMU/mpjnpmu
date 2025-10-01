@@ -38,7 +38,7 @@ export default function TaskTracker({ currentUser, userProfile }) {
     setProfiles(data || [])
   }
 
-  const canAddTasks = userProfile?.role === 'admin' || userProfile?.role === 'collaborator'
+  const canAddTasks = userProfile?.role === 'admin'
   const canEditAllTasks = userProfile?.role === 'admin'
 
   const addTask = async () => {

@@ -29,19 +29,34 @@ export default function AuthForm({ onClose }) {
         
         if (error) throw error
         
-        if (data.user && !data.session) {
-          setMessage('Check your email for the confirmation link!')
-        } else {
-          // Auto-create profile
-          await supabase.from('profiles').upsert({
-            id: data.user.id,
-            full_name: fullName,
-            email: email,
-            role: 'collaborator',
-            present: false,
-            updated_at: new Date().toISOString()
-          })
-          onClose()
+                  if (data.user) {
+          // Manually create profile after signup with 'member' role
+          try {
+            const { error: profileError } = await supabase
+              .from('profiles')
+              .upsert({
+                id: data.user.id,
+                email: email,
+                full_name: fullName,
+                role: 'member', // Changed from 'collaborator' to 'member'
+                present: false,
+                created_at: new Date().toISOString(),
+                updated_at: new Date().toISOString()
+              }, { onConflict: 'id' })
+            
+            if (profileError) {
+              console.error('Profile creation error:', profileError)
+            }
+          } catch (profileErr) {
+            console.error('Profile creation failed:', profileErr)
+          }
+          
+          if (!data.session) {
+            setMessage('Check your email for the confirmation link!')
+          } else {
+            setMessage('Account created successfully!')
+            setTimeout(() => onClose(), 1500)
+          }
         }
       } else {
         const { error } = await supabase.auth.signInWithPassword({

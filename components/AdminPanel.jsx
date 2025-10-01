@@ -42,7 +42,16 @@ export default function AdminPanel({ currentUser }) {
 
   const toggleUserRole = async (userId, currentRole) => {
     try {
-      const newRole = currentRole === 'admin' ? 'collaborator' : 'admin'
+      // Cycle through roles: member -> collaborator -> admin -> member
+      let newRole
+      if (currentRole === 'member') {
+        newRole = 'collaborator'
+      } else if (currentRole === 'collaborator') {
+        newRole = 'admin'
+      } else {
+        newRole = 'member'
+      }
+
       const { error } = await supabase
         .from('profiles')
         .update({ role: newRole })
@@ -212,32 +221,23 @@ export default function AdminPanel({ currentUser }) {
                       <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                         profile.role === 'admin' 
                           ? 'bg-yellow-100 text-yellow-800 border border-yellow-200' 
-                          : 'bg-blue-100 text-blue-800 border border-blue-200'
+                          : profile.role === 'collaborator'
+                          ? 'bg-blue-100 text-blue-800 border border-blue-200'
+                          : 'bg-gray-100 text-gray-800 border border-gray-200'
                       }`}>
-                        {profile.role === 'admin' ? 'Team Leader' : 'Collaborator'}
+                        {profile.role === 'admin' ? '👑 Admin' : profile.role === 'collaborator' ? '👥 Collaborator' : '👤 Member'}
                       </span>
 
                       {profile.id !== currentUser.id && (
                         <div className="flex space-x-2">
                           <button
                             onClick={() => toggleUserRole(profile.id, profile.role)}
-                            className={`btn-secondary text-sm ${
-                              profile.role === 'admin' 
-                                ? 'hover:bg-red-50 hover:text-red-600' 
-                                : 'hover:bg-yellow-50 hover:text-yellow-600'
-                            }`}
+                            className="btn-secondary text-sm"
                           >
-                            {profile.role === 'admin' ? (
-                              <>
-                                <UserX className="w-4 h-4 mr-1" />
-                                Revoke Admin
-                              </>
-                            ) : (
-                              <>
-                                <UserCheck className="w-4 h-4 mr-1" />
-                                Make Admin
-                              </>
-                            )}
+                            <UserCheck className="w-4 h-4 mr-1" />
+                            {profile.role === 'member' ? 'Make Collaborator' : 
+                             profile.role === 'collaborator' ? 'Make Admin' : 
+                             'Make Member'}
                           </button>
 
                           <button

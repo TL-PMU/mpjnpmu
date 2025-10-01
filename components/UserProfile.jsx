@@ -169,9 +169,13 @@ export default function UserProfile({ currentUser, userProfile, onProfileUpdate 
                   <span className={`px-2 py-1 rounded text-xs font-medium ${
                     userProfile?.role === 'admin' 
                       ? 'bg-yellow-100 text-yellow-800' 
-                      : 'bg-blue-100 text-blue-800'
+                      : userProfile?.role === 'collaborator'
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-gray-100 text-gray-800'
                   }`}>
-                    {userProfile?.role === 'admin' ? 'Team Leader' : 'Collaborator'}
+                    {userProfile?.role === 'admin' ? '👑 Admin' : 
+                     userProfile?.role === 'collaborator' ? '👥 Collaborator' : 
+                     '👤 Member'}
                   </span>
                 </div>
                 <div className="flex justify-between">
@@ -259,7 +263,9 @@ export default function UserProfile({ currentUser, userProfile, onProfileUpdate 
 
         <div className="glass-card p-4 text-center">
           <div className="text-lg font-semibold text-water-700">
-            {userProfile?.role === 'admin' ? 'Admin' : 'Member'}
+            {userProfile?.role === 'admin' ? 'Admin' : 
+             userProfile?.role === 'collaborator' ? 'Collaborator' : 
+             'Member'}
           </div>
           <div className="text-sm text-water-600">Access Level</div>
         </div>

@@ -272,7 +272,17 @@ export default function Home() {
                           </p>
                           {member.role === 'admin' && (
                             <span className="inline-block mt-1 px-2 py-1 bg-gradient-to-r from-yellow-400 to-orange-500 text-white text-xs rounded-full">
-                              Team Leader
+                              👑 Admin
+                            </span>
+                          )}
+                          {member.role === 'collaborator' && (
+                            <span className="inline-block mt-1 px-2 py-1 bg-gradient-to-r from-blue-400 to-blue-500 text-white text-xs rounded-full">
+                              👥 Collaborator
+                            </span>
+                          )}
+                          {member.role === 'member' && (
+                            <span className="inline-block mt-1 px-2 py-1 bg-gradient-to-r from-gray-400 to-gray-500 text-white text-xs rounded-full">
+                              👤 Member
                             </span>
                           )}
                         </div>
@@ -295,7 +305,7 @@ export default function Home() {
             </section>
 
             {/* Quick Stats */}
-            <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <section className="grid grid-cols-2 md:grid-cols-5 gap-4">
               <div className="glass-card p-4 text-center">
                 <div className="text-2xl font-bold text-water-700">
                   {members?.length || 0}
@@ -315,10 +325,16 @@ export default function Home() {
                 <div className="text-sm text-water-600">Admins</div>
               </div>
               <div className="glass-card p-4 text-center">
-                <div className="text-2xl font-bold text-purple-600">
+                <div className="text-2xl font-bold text-blue-600">
                   {members?.filter(m => m.role === 'collaborator').length || 0}
                 </div>
                 <div className="text-sm text-water-600">Collaborators</div>
+              </div>
+              <div className="glass-card p-4 text-center">
+                <div className="text-2xl font-bold text-purple-600">
+                  {members?.filter(m => m.role === 'member').length || 0}
+                </div>
+                <div className="text-sm text-water-600">Members</div>
               </div>
             </section>
           </div>
