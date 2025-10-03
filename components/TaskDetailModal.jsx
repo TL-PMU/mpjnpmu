@@ -1,11 +1,33 @@
-import { useState, useEffect } from 'react'
+</div>
+              </div>
+            </>
+            )}
+
+            {/* Comments Tab */}
+            {showComments && (
+              <div className="glass-card p-4">
+                <h3 className="font-semibold text-water-800 mb-4 flex items-center space-x-2">
+                  <MessageSquare className="w-5 h-5" />
+                  <span>Comments & Discussion</span>
+                </h3>
+                <TaskComments
+                  taskId={task.id}
+                  currentUser={currentUser}
+                  userProfile={userProfile}
+                  profiles={profiles}
+                />
+              </div>
+            )}
+          </div>import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { X, Edit3, Save, User, Users, Calendar, Clock, AlertCircle, Trash2 } from 'lucide-react'
+import { X, Edit3, Save, User, Users, Calendar, Clock, AlertCircle, Trash2, MessageSquare } from 'lucide-react'
+import TaskComments from './TaskComments'
 
 export default function TaskDetailModal({ task, currentUser, userProfile, profiles, onClose, onTaskUpdated }) {
   const [isEditing, setIsEditing] = useState(false)
   const [loading, setLoading] = useState(false)
   const [assignments, setAssignments] = useState([])
+  const [showComments, setShowComments] = useState(true)
   const [formData, setFormData] = useState({
     title: task.title || '',
     description: task.description || '',
@@ -251,8 +273,36 @@ export default function TaskDetailModal({ task, currentUser, userProfile, profil
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column - Main Details */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Description */}
-            <div className="glass-card p-4">
+            {/* Tab Navigation */}
+            <div className="flex space-x-2 border-b border-water-200">
+              <button
+                onClick={() => setShowComments(false)}
+                className={`px-4 py-2 font-medium transition-colors ${
+                  !showComments 
+                    ? 'text-water-700 border-b-2 border-water-500' 
+                    : 'text-water-500 hover:text-water-700'
+                }`}
+              >
+                Details
+              </button>
+              <button
+                onClick={() => setShowComments(true)}
+                className={`px-4 py-2 font-medium transition-colors flex items-center space-x-2 ${
+                  showComments 
+                    ? 'text-water-700 border-b-2 border-water-500' 
+                    : 'text-water-500 hover:text-water-700'
+                }`}
+              >
+                <MessageSquare className="w-4 h-4" />
+                <span>Comments</span>
+              </button>
+            </div>
+
+            {/* Details Tab */}
+            {!showComments && (
+              <>
+                {/* Description */}
+                <div className="glass-card p-4">
               <h3 className="font-semibold text-water-800 mb-2">Description</h3>
               {isEditing && canEditFull ? (
                 <textarea
