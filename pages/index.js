@@ -75,6 +75,7 @@ export default function Home() {
   const tabs = [
     { id: 'home', label: 'Home', icon: Users },
     { id: 'tasks', label: 'Task Tracker', icon: CheckSquare },
+    { id: 'notices', label: 'Notices', icon: Bell },
     { id: 'profile', label: 'User Profile', icon: User },
     ...(userProfile?.role === 'admin' ? [{ id: 'admin', label: 'Admin Panel', icon: Settings }] : [])
   ]
@@ -345,6 +346,13 @@ export default function Home() {
         {activeTab === 'tasks' && (
           <div className="animate-fade-in">
             <TaskTracker currentUser={user} userProfile={userProfile} />
+          </div>
+        )}
+
+        {/* Notices Tab */}
+        {activeTab === 'notices' && (
+          <div className="animate-fade-in">
+            <Notices currentUser={user} userProfile={userProfile} />
           </div>
         )}
 
