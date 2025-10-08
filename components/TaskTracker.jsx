@@ -178,7 +178,7 @@ function AddTaskModal({ profiles, currentUser, userProfile, onClose, onTaskAdded
     try {
       const primaryPocProfile = profiles.find(p => p.id === formData.primary_poc)
       
-      // Create task
+      // Create task first
       const { data: taskData, error: taskError } = await supabase
         .from('tasks')
         .insert([{
@@ -198,29 +198,37 @@ function AddTaskModal({ profiles, currentUser, userProfile, onClose, onTaskAdded
 
       if (taskError) throw taskError
 
-      // Add additional members if any
+      // Wait a moment for the trigger to create primary POC assignment
+      await new Promise(resolve => setTimeout(resolve, 500))
+
+      // Add additional members if any (excluding primary POC)
       if (formData.additional_members.length > 0) {
-        const assignments = formData.additional_members.map(userId => {
-          const profile = profiles.find(p => p.id === userId)
-          return {
-            task_id: taskData.id,
-            user_id: userId,
-            user_name: profile?.full_name || profile?.email,
-            is_primary_poc: false
-          }
-        })
+        const assignments = formData.additional_members
+          .filter(userId => userId !== formData.primary_poc) // Exclude primary POC
+          .map(userId => {
+            const profile = profiles.find(p => p.id === userId)
+            return {
+              task_id: taskData.id,
+              user_id: userId,
+              user_name: profile?.full_name || profile?.email,
+              is_primary_poc: false
+            }
+          })
 
-        const { error: assignError } = await supabase
-          .from('task_assignments')
-          .insert(assignments)
+        if (assignments.length > 0) {
+          const { error: assignError } = await supabase
+            .from('task_assignments')
+            .insert(assignments)
 
-        if (assignError) throw assignError
+          if (assignError) throw assignError
+        }
       }
 
       onTaskAdded()
       onClose()
     } catch (error) {
-      alert(error.message)
+      console.error('Error creating task:', error)
+      alert('Error creating task: ' + error.message)
     } finally {
       setLoading(false)
     }
