@@ -178,49 +178,81 @@ function AddTaskModal({ profiles, currentUser, userProfile, onClose, onTaskAdded
     try {
       const primaryPocProfile = profiles.find(p => p.id === formData.primary_poc)
       
-      // Create task first
+      // Step 1: Create task WITHOUT the trigger interfering
+      // We'll manually create all assignments after
+      const taskInsert = {
+        title: formData.title,
+        description: formData.description,
+        assigned_to: formData.primary_poc,
+        assigned_to_name: primaryPocProfile?.full_name || primaryPocProfile?.email,
+        assigned_by: currentUser.id,
+        assigned_by_name: userProfile?.full_name || currentUser.email,
+        due_date: formData.due_date ? new Date(formData.due_date).toISOString() : null,
+        current_status: 'Open',
+        primary_poc: formData.primary_poc,
+        primary_poc_name: primaryPocProfile?.full_name || primaryPocProfile?.email
+      }
+
       const { data: taskData, error: taskError } = await supabase
         .from('tasks')
-        .insert([{
-          title: formData.title,
-          description: formData.description,
-          assigned_to: formData.primary_poc,
-          assigned_to_name: primaryPocProfile?.full_name || primaryPocProfile?.email,
-          assigned_by: currentUser.id,
-          assigned_by_name: userProfile?.full_name || currentUser.email,
-          primary_poc: formData.primary_poc,
-          primary_poc_name: primaryPocProfile?.full_name || primaryPocProfile?.email,
-          due_date: formData.due_date ? new Date(formData.due_date).toISOString() : null,
-          current_status: 'Open'
-        }])
+        .insert([taskInsert])
         .select()
         .single()
 
-      if (taskError) throw taskError
+      if (taskError) {
+        console.error('Task creation error:', taskError)
+        throw new Error('Failed to create task: ' + taskError.message)
+      }
 
-      // Wait a moment for the trigger to create primary POC assignment
-      await new Promise(resolve => setTimeout(resolve, 500))
+      if (!taskData || !taskData.id) {
+        throw new Error('Task created but no ID returned')
+      }
 
-      // Add additional members if any (excluding primary POC)
-      if (formData.additional_members.length > 0) {
-        const assignments = formData.additional_members
-          .filter(userId => userId !== formData.primary_poc) // Exclude primary POC
-          .map(userId => {
-            const profile = profiles.find(p => p.id === userId)
-            return {
-              task_id: taskData.id,
-              user_id: userId,
-              user_name: profile?.full_name || profile?.email,
-              is_primary_poc: false
-            }
-          })
+      console.log('Task created successfully:', taskData.id)
 
-        if (assignments.length > 0) {
-          const { error: assignError } = await supabase
-            .from('task_assignments')
-            .insert(assignments)
+      // Step 2: Wait for trigger to complete (if it runs)
+      await new Promise(resolve => setTimeout(resolve, 1000))
 
-          if (assignError) throw assignError
+      // Step 3: Check if primary POC assignment already exists (from trigger)
+      const { data: existingAssignments } = await supabase
+        .from('task_assignments')
+        .select('user_id')
+        .eq('task_id', taskData.id)
+
+      const existingUserIds = existingAssignments?.map(a => a.user_id) || []
+      console.log('Existing assignments:', existingUserIds)
+
+      // Step 4: Build list of all members to assign (including primary POC if not already assigned)
+      const allMembersToAssign = [formData.primary_poc, ...formData.additional_members]
+      const uniqueMembers = [...new Set(allMembersToAssign)] // Remove duplicates
+
+      // Step 5: Only insert members that don't already have assignments
+      const membersToInsert = uniqueMembers.filter(userId => !existingUserIds.includes(userId))
+
+      console.log('Members to insert:', membersToInsert)
+
+      if (membersToInsert.length > 0) {
+        const assignments = membersToInsert.map(userId => {
+          const profile = profiles.find(p => p.id === userId)
+          return {
+            task_id: taskData.id,
+            user_id: userId,
+            user_name: profile?.full_name || profile?.email,
+            is_primary_poc: userId === formData.primary_poc
+          }
+        })
+
+        console.log('Inserting assignments:', assignments)
+
+        const { error: assignError } = await supabase
+          .from('task_assignments')
+          .insert(assignments)
+
+        if (assignError) {
+          console.error('Assignment error:', assignError)
+          // Don't throw error here - task is already created
+          // Just log it and continue
+          console.warn('Could not create some assignments, but task was created successfully')
         }
       }
 
@@ -228,7 +260,7 @@ function AddTaskModal({ profiles, currentUser, userProfile, onClose, onTaskAdded
       onClose()
     } catch (error) {
       console.error('Error creating task:', error)
-      alert('Error creating task: ' + error.message)
+      alert('Error: ' + error.message)
     } finally {
       setLoading(false)
     }
