@@ -76,6 +76,7 @@ export default function Home() {
   const tabs = [
     { id: 'home', label: 'Home', icon: Users },
     { id: 'tasks', label: 'Task Tracker', icon: CheckSquare },
+    { id: 'attendance', label: 'Attendance', icon: Calendar },
     { id: 'notices', label: 'Notices', icon: Bell },
     { id: 'profile', label: 'User Profile', icon: User },
     ...(userProfile?.role === 'admin' ? [{ id: 'admin', label: 'Admin Panel', icon: Settings }] : [])
@@ -353,7 +354,7 @@ export default function Home() {
         {/* Attendance Tab */}
         {activeTab === 'attendance' && (
           <div className="animate-fade-in">
-            <Notices currentUser={user} userProfile={userProfile} />
+            <AttendanceTracker currentUser={user} userProfile={userProfile} />
           </div>
         )}
 
