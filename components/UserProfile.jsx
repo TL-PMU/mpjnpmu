@@ -1,4 +1,46 @@
-import { useState, useEffect } from 'react'
+<div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-water-700 mb-2">
+                <User className="w-4 h-4 inline mr-2" />
+                Full Name
+              </label>
+              <input
+                type="text"
+                value={form.full_name}
+                onChange={(e) => setForm({ ...form, full_name: e.target.value })}
+                placeholder="Enter your full name"
+                className="input-field"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-water-700 mb-2">
+                <Phone className="w-4 h-4 inline mr-2" />
+                Phone Number
+              </label>
+              <input
+                type="tel"
+                value={form.phone}
+                onChange={(e) => setForm({ ...form, phone: e.target.value })}
+                placeholder="Enter your phone number"
+                className="input-field"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-water-700 mb-2">
+                <Briefcase className="w-4 h-4 inline mr-2" />
+                Designation
+              </label>
+              <input
+                type="text"
+                value={form.designation}
+                onChange={(e) => setForm({ ...form, designation: e.target.value })}
+                placeholder="Enter your designation"
+                className="input-field"
+              />
+            </div>
+          </div>import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { User, Phone, Briefcase, CheckCircle, XCircle, Save, AlertCircle } from 'lucide-react'
 

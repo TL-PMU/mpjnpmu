@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { Users, CheckSquare, User, LogOut, Settings, Menu, X, Bell } from 'lucide-react'
+import { Users, CheckSquare, User, LogOut, Settings, Menu, X, Bell, Calendar } from 'lucide-react'
 import useSWR from 'swr'
 
 // Components
@@ -9,6 +9,7 @@ import TaskTracker from '../components/TaskTracker'
 import UserProfile from '../components/UserProfile'
 import AdminPanel from '../components/AdminPanel'
 import Notices from '../components/Notices'
+import AttendanceTracker from '../components/AttendanceTracker'
 
 const fetcher = async (query) => {
   const { data, error } = await supabase.from(query.table).select(query.select)
