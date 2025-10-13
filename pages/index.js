@@ -350,6 +350,13 @@ export default function Home() {
           </div>
         )}
 
+        {/* Attendance Tab */}
+        {activeTab === 'attendance' && (
+          <div className="animate-fade-in">
+            <Notices currentUser={user} userProfile={userProfile} />
+          </div>
+        )}
+
         {/* Notices Tab */}
         {activeTab === 'notices' && (
           <div className="animate-fade-in">
