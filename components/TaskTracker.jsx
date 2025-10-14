@@ -1,4 +1,24 @@
-import { useState, useEffect } from 'react'
+export default function TaskTracker({ currentUser, userProfile }) {
+  const [showAddTask, setShowAddTask] = useState(false)
+  const [selectedTask, setSelectedTask] = useState(null)
+  const [profiles, setProfiles] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [taskFilter, setTaskFilter] = useState('all') // 'all' or 'my'
+
+  // Fetch tasks with SWR
+  const { data: tasks, error: tasksError, mutate: mutateTasks } = useSWR(
+    { table: 'tasks', select: '*' }, 
+    fetcher,
+    { refreshInterval: 10000 }
+  )
+
+  // Load profiles for task assignment
+  useEffect(() => {
+    loadProfiles()
+  }, [])
+
+  const loadProfiles = async () => {
+    const { dataimport { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { CheckSquare, Plus, Calendar, User, Clock, AlertCircle, CheckCircle, Loader, X, Users } from 'lucide-react'
 import useSWR from 'swr'
