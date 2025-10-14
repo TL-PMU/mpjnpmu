@@ -18,7 +18,7 @@ export default function TaskTracker({ currentUser, userProfile }) {
   }, [])
 
   const loadProfiles = async () => {
-    const { dataimport { useState, useEffect } from 'react'
+    import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { CheckSquare, Plus, Calendar, User, Clock, AlertCircle, CheckCircle, Loader, X, Users } from 'lucide-react'
 import useSWR from 'swr'
