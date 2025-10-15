@@ -1,24 +1,4 @@
-export default function TaskTracker({ currentUser, userProfile }) {
-  const [showAddTask, setShowAddTask] = useState(false)
-  const [selectedTask, setSelectedTask] = useState(null)
-  const [profiles, setProfiles] = useState([])
-  const [loading, setLoading] = useState(false)
-  const [taskFilter, setTaskFilter] = useState('all') // 'all' or 'my'
-
-  // Fetch tasks with SWR
-  const { data: tasks, error: tasksError, mutate: mutateTasks } = useSWR(
-    { table: 'tasks', select: '*' }, 
-    fetcher,
-    { refreshInterval: 10000 }
-  )
-
-  // Load profiles for task assignment
-  useEffect(() => {
-    loadProfiles()
-  }, [])
-
-  const loadProfiles = async () => {
-    import { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { CheckSquare, Plus, Calendar, User, Clock, AlertCircle, CheckCircle, Loader, X, Users } from 'lucide-react'
 import useSWR from 'swr'
@@ -34,15 +14,15 @@ export default function TaskTracker({ currentUser, userProfile }) {
   const [showAddTask, setShowAddTask] = useState(false)
   const [selectedTask, setSelectedTask] = useState(null)
   const [profiles, setProfiles] = useState([])
+  const [loading, setLoading] = useState(false)
+  const [taskFilter, setTaskFilter] = useState('all')
 
-  // Fetch tasks with SWR
   const { data: tasks, error: tasksError, mutate: mutateTasks } = useSWR(
     { table: 'tasks', select: '*' }, 
     fetcher,
     { refreshInterval: 10000 }
   )
 
-  // Load profiles for task assignment
   useEffect(() => {
     loadProfiles()
   }, [])
@@ -67,7 +47,6 @@ export default function TaskTracker({ currentUser, userProfile }) {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
       <div className="glass-card p-6">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-3">
@@ -76,46 +55,33 @@ export default function TaskTracker({ currentUser, userProfile }) {
           </div>
           
           {canAddTasks && (
-            <button
-              onClick={() => setShowAddTask(true)}
-              className="btn-primary"
-            >
+            <button onClick={() => setShowAddTask(true)} className="btn-primary">
               <Plus className="w-4 h-4 mr-2" />
               Add Task
             </button>
           )}
         </div>
 
-        {/* Task Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="text-center">
-            <div className="text-2xl font-bold text-water-700">
-              {tasks?.length || 0}
-            </div>
+            <div className="text-2xl font-bold text-water-700">{tasks?.length || 0}</div>
             <div className="text-sm text-water-600">Total Tasks</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-blue-600">
-              {tasks?.filter(t => t.current_status === 'In Progress').length || 0}
-            </div>
+            <div className="text-2xl font-bold text-blue-600">{tasks?.filter(t => t.current_status === 'In Progress').length || 0}</div>
             <div className="text-sm text-water-600">In Progress</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-green-600">
-              {tasks?.filter(t => t.current_status === 'Done').length || 0}
-            </div>
+            <div className="text-2xl font-bold text-green-600">{tasks?.filter(t => t.current_status === 'Done').length || 0}</div>
             <div className="text-sm text-water-600">Completed</div>
           </div>
           <div className="text-center">
-            <div className="text-2xl font-bold text-red-600">
-              {tasks?.filter(t => t.current_status === 'Blocked').length || 0}
-            </div>
+            <div className="text-2xl font-bold text-red-600">{tasks?.filter(t => t.current_status === 'Blocked').length || 0}</div>
             <div className="text-sm text-water-600">Blocked</div>
           </div>
         </div>
       </div>
 
-      {/* Add Task Modal */}
       {showAddTask && (
         <AddTaskModal
           profiles={profiles}
@@ -126,7 +92,6 @@ export default function TaskTracker({ currentUser, userProfile }) {
         />
       )}
 
-      {/* Task Detail Modal */}
       {selectedTask && (
         <TaskDetailModal
           task={selectedTask}
@@ -138,7 +103,6 @@ export default function TaskTracker({ currentUser, userProfile }) {
         />
       )}
 
-      {/* Tasks List */}
       <div className="glass-card p-6">
         {tasksError ? (
           <div className="text-center py-8">
@@ -180,7 +144,6 @@ export default function TaskTracker({ currentUser, userProfile }) {
   )
 }
 
-// Add Task Modal Component
 function AddTaskModal({ profiles, currentUser, userProfile, onClose, onTaskAdded }) {
   const [loading, setLoading] = useState(false)
   const [formData, setFormData] = useState({
@@ -198,8 +161,6 @@ function AddTaskModal({ profiles, currentUser, userProfile, onClose, onTaskAdded
     try {
       const primaryPocProfile = profiles.find(p => p.id === formData.primary_poc)
       
-      // Step 1: Create task WITHOUT the trigger interfering
-      // We'll manually create all assignments after
       const taskInsert = {
         title: formData.title,
         description: formData.description,
@@ -219,37 +180,21 @@ function AddTaskModal({ profiles, currentUser, userProfile, onClose, onTaskAdded
         .select()
         .single()
 
-      if (taskError) {
-        console.error('Task creation error:', taskError)
-        throw new Error('Failed to create task: ' + taskError.message)
-      }
+      if (taskError) throw new Error('Failed to create task: ' + taskError.message)
+      if (!taskData || !taskData.id) throw new Error('Task created but no ID returned')
 
-      if (!taskData || !taskData.id) {
-        throw new Error('Task created but no ID returned')
-      }
-
-      console.log('Task created successfully:', taskData.id)
-
-      // Step 2: Wait for trigger to complete (if it runs)
       await new Promise(resolve => setTimeout(resolve, 1000))
 
-      // Step 3: Check if primary POC assignment already exists (from trigger)
       const { data: existingAssignments } = await supabase
         .from('task_assignments')
         .select('user_id')
         .eq('task_id', taskData.id)
 
       const existingUserIds = existingAssignments?.map(a => a.user_id) || []
-      console.log('Existing assignments:', existingUserIds)
 
-      // Step 4: Build list of all members to assign (including primary POC if not already assigned)
       const allMembersToAssign = [formData.primary_poc, ...formData.additional_members]
-      const uniqueMembers = [...new Set(allMembersToAssign)] // Remove duplicates
-
-      // Step 5: Only insert members that don't already have assignments
+      const uniqueMembers = [...new Set(allMembersToAssign)]
       const membersToInsert = uniqueMembers.filter(userId => !existingUserIds.includes(userId))
-
-      console.log('Members to insert:', membersToInsert)
 
       if (membersToInsert.length > 0) {
         const assignments = membersToInsert.map(userId => {
@@ -262,24 +207,12 @@ function AddTaskModal({ profiles, currentUser, userProfile, onClose, onTaskAdded
           }
         })
 
-        console.log('Inserting assignments:', assignments)
-
-        const { error: assignError } = await supabase
-          .from('task_assignments')
-          .insert(assignments)
-
-        if (assignError) {
-          console.error('Assignment error:', assignError)
-          // Don't throw error here - task is already created
-          // Just log it and continue
-          console.warn('Could not create some assignments, but task was created successfully')
-        }
+        await supabase.from('task_assignments').insert(assignments)
       }
 
       onTaskAdded()
       onClose()
     } catch (error) {
-      console.error('Error creating task:', error)
       alert('Error: ' + error.message)
     } finally {
       setLoading(false)
@@ -287,17 +220,12 @@ function AddTaskModal({ profiles, currentUser, userProfile, onClose, onTaskAdded
   }
 
   const toggleMember = (userId) => {
-    if (formData.additional_members.includes(userId)) {
-      setFormData({
-        ...formData,
-        additional_members: formData.additional_members.filter(id => id !== userId)
-      })
-    } else {
-      setFormData({
-        ...formData,
-        additional_members: [...formData.additional_members, userId]
-      })
-    }
+    setFormData({
+      ...formData,
+      additional_members: formData.additional_members.includes(userId)
+        ? formData.additional_members.filter(id => id !== userId)
+        : [...formData.additional_members, userId]
+    })
   }
 
   return (
@@ -307,9 +235,7 @@ function AddTaskModal({ profiles, currentUser, userProfile, onClose, onTaskAdded
         
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-water-700 mb-2">
-              Task Title *
-            </label>
+            <label className="block text-sm font-medium text-water-700 mb-2">Task Title *</label>
             <input
               type="text"
               value={formData.title}
@@ -321,9 +247,7 @@ function AddTaskModal({ profiles, currentUser, userProfile, onClose, onTaskAdded
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-water-700 mb-2">
-              Description
-            </label>
+            <label className="block text-sm font-medium text-water-700 mb-2">Description</label>
             <textarea
               value={formData.description}
               onChange={(e) => setFormData({ ...formData, description: e.target.value })}
@@ -334,9 +258,7 @@ function AddTaskModal({ profiles, currentUser, userProfile, onClose, onTaskAdded
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-water-700 mb-2">
-              Primary Point of Contact *
-            </label>
+            <label className="block text-sm font-medium text-water-700 mb-2">Primary Point of Contact *</label>
             <select
               value={formData.primary_poc}
               onChange={(e) => setFormData({ ...formData, primary_poc: e.target.value })}
@@ -350,38 +272,30 @@ function AddTaskModal({ profiles, currentUser, userProfile, onClose, onTaskAdded
                 </option>
               ))}
             </select>
-            <p className="text-xs text-water-600 mt-1">
-              Primary POC can update task status and expected completion date
-            </p>
+            <p className="text-xs text-water-600 mt-1">Primary POC can update task status and expected completion date</p>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-water-700 mb-2">
-              Additional Team Members
-            </label>
+            <label className="block text-sm font-medium text-water-700 mb-2">Additional Team Members</label>
             <div className="glass-card p-3 max-h-48 overflow-y-auto">
-              {profiles
-                .filter(p => p.id !== formData.primary_poc)
-                .map((profile) => (
-                  <label key={profile.id} className="flex items-center space-x-2 py-2 cursor-pointer hover:bg-water-50 rounded px-2">
-                    <input
-                      type="checkbox"
-                      checked={formData.additional_members.includes(profile.id)}
-                      onChange={() => toggleMember(profile.id)}
-                      className="w-4 h-4 text-water-500 border-water-300 rounded"
-                    />
-                    <span className="text-sm text-water-700">
-                      {profile.full_name || profile.email} ({profile.role})
-                    </span>
-                  </label>
+              {profiles.filter(p => p.id !== formData.primary_poc).map((profile) => (
+                <label key={profile.id} className="flex items-center space-x-2 py-2 cursor-pointer hover:bg-water-50 rounded px-2">
+                  <input
+                    type="checkbox"
+                    checked={formData.additional_members.includes(profile.id)}
+                    onChange={() => toggleMember(profile.id)}
+                    className="w-4 h-4 text-water-500 border-water-300 rounded"
+                  />
+                  <span className="text-sm text-water-700">
+                    {profile.full_name || profile.email} ({profile.role})
+                  </span>
+                </label>
               ))}
             </div>
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-water-700 mb-2">
-              Due Date
-            </label>
+            <label className="block text-sm font-medium text-water-700 mb-2">Due Date</label>
             <input
               type="date"
               value={formData.due_date}
@@ -391,18 +305,8 @@ function AddTaskModal({ profiles, currentUser, userProfile, onClose, onTaskAdded
           </div>
 
           <div className="flex justify-end space-x-3 pt-4">
-            <button
-              type="button"
-              onClick={onClose}
-              className="btn-secondary"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary disabled:opacity-50"
-            >
+            <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
+            <button type="submit" disabled={loading} className="btn-primary disabled:opacity-50">
               {loading ? 'Creating...' : 'Create Task'}
             </button>
           </div>
@@ -412,7 +316,6 @@ function AddTaskModal({ profiles, currentUser, userProfile, onClose, onTaskAdded
   )
 }
 
-// Task Card Component
 function TaskCard({ task, currentUser, userProfile, onClick, index }) {
   const [assignments, setAssignments] = useState([])
 
@@ -444,28 +347,18 @@ function TaskCard({ task, currentUser, userProfile, onClick, index }) {
     >
       <div className="flex items-start justify-between mb-3">
         <div className="flex-1">
-          <h4 className="font-semibold text-water-800 text-lg">
-            {task.title || 'Untitled Task'}
-          </h4>
-          {task.description && (
-            <p className="text-sm text-water-600 mt-1 line-clamp-2">
-              {task.description}
-            </p>
-          )}
+          <h4 className="font-semibold text-water-800 text-lg">{task.title || 'Untitled Task'}</h4>
+          {task.description && <p className="text-sm text-water-600 mt-1 line-clamp-2">{task.description}</p>}
           <div className="flex items-center flex-wrap gap-2 mt-2">
             <span className="flex items-center space-x-1 text-sm text-water-600">
               <Users className="w-4 h-4" />
               <span>{assignments.length} assigned</span>
             </span>
             {isPrimaryPOC && (
-              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">
-                Primary POC
-              </span>
+              <span className="px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full font-medium">Primary POC</span>
             )}
             {isAssigned && !isPrimaryPOC && (
-              <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">
-                Team Member
-              </span>
+              <span className="px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">Team Member</span>
             )}
           </div>
         </div>
@@ -513,9 +406,6 @@ function TaskCard({ task, currentUser, userProfile, onClick, index }) {
     </div>
   )
 }
-
-// Task Detail Modal Component
-// Imported from TaskDetailModal.jsx
 
 function getStatusColor(status) {
   switch (status?.toLowerCase()) {
